@@ -55,4 +55,4 @@ jobs:
         env:
           today: ${{ env.TODAY }}
         run: |
-          aws s3 cp /tmp/mongodump s3://pyoniverse-backup/crawling/dev/$today --recursive
+          aws s3 cp /tmp/mongodump s3://pyoniverse-backup/$today --recursive

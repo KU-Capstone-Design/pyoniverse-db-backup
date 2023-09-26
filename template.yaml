@@ -57,5 +57,4 @@ jobs:
         env:
           today: ${{ env.TODAY }}
         run: |
-          # DB_NAME(dev, prod 제외), ENV(dev,prod) 를 작성헤주세요
-          aws s3 cp /tmp/mongodump s3://pyoniverse-backup/{DB_NAME}/{ENV}/$today --recursive 
+          aws s3 cp /tmp/mongodump s3://pyoniverse-backup/$today --recursive 
