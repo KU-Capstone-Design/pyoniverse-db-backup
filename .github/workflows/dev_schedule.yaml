@@ -1,0 +1,101 @@
+name: Backup Scheduling - dev
+on:
+  schedule:
+    - cron: "0 16 * * *" # UTC 16시 = KWT AM 1시
+  push:
+    branches:
+      - develop
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CRAWLING_DB: ${{ secrets.CRAWLING_DEV_DB }}
+      SERVICE_DB: ${{ secrets.SERVICE_DEV_DB }}
+      EVENT_BUS: ${{secrets.EVENT_DEV_BUS}}
+      EVENT_SOURCE: ${{secrets.EVENT_SOURCE}}
+      EVENT_DETAILTYPE: ${{secrets.EVENT_DETAILTYPE}}
+      SLEEP_TIME: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Install MongoDB tools
+        run: |
+          wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
+          echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+          sudo apt-get update
+          sudo apt-get install -y mongodb-org-tools mongodb-org-shell
+      
+      - name: Run mongodump - ${{ env.CRAWLING_DB }}
+        run: |
+          collections=$(mongo --quiet "${{ secrets.MONGO_URI }}/${{ env.CRAWLING_DB }}" --eval "db.getCollectionNames()")
+          echo "Collections: $collections"
+
+          collections=${collections//\"/}
+          collections=${collections//\[/}
+          collections=${collections//\]/}
+          collections=${collections//,/}
+
+          for collection in $collections ;
+          do
+            echo "Dumping $collection"
+            mongodump --uri="${{ secrets.MONGO_URI }}/${{ env.CRAWLING_DB }}" --readPreference=secondaryPreferred --collection=$collection --out=/tmp/mongodump
+            echo "Done dumping $collection, sleeping for ${{ env.SLEEP_TIME }} seconds"
+            sleep ${{ env.SLEEP_TIME }}
+          done
+
+      - name: Run mongodump - ${{ env.SERVICE_DB }}
+        run: |
+          collections=$(mongo --quiet "${{ secrets.MONGO_URI }}/${{ env.SERVICE_DB }}" --eval "db.getCollectionNames()")
+          echo "Collections: $collections"
+
+          collections=${collections//\"/}
+          collections=${collections//\[/}
+          collections=${collections//\]/}
+          collections=${collections//,/}
+
+          for collection in $collections ;
+          do
+            echo "Dumping $collection"
+            mongodump --uri="${{ secrets.MONGO_URI }}/${{ env.SERVICE_DB }}" --readPreference=secondaryPreferred --collection=$collection --out=/tmp/mongodump
+            echo "Done dumping $collection, sleeping for ${{ env.SLEEP_TIME }} seconds"
+            sleep ${{ env.SLEEP_TIME }}
+          done 
+      
+      - name: Set today
+        run: |
+          echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+      - name: Upload backup to S3
+        run: |
+          aws s3 cp /tmp/mongodump s3://pyoniverse-backup/${{env.TODAY}} --recursive
+
+      - name: Put event to start etl pipeline
+        run: |
+          echo '[{
+            "Source": "${{env.EVENT_SOURCE}}",
+            "DetailType": "${{env.EVENT_DETAILTYPE}}",
+            "EventBusName": "${{env.EVENT_BUS}}",
+            "Detail": "{\"date\": \"${{env.TODAY}}\"}"
+          }]' > event.json
+          aws events put-events --entries file://event.json
+
+      - name: Deploy Alarm
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: C05NYKY1KS6
+          author_name: Github Action
+          fields: repo,commit,message,author,took,workflow
+          mention: here
+          if_mention: failure,cancelled
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: always()
