@@ -1,11 +1,7 @@
 name: Backup Scheduling - dev
 on:
   schedule:
-<<<<<<< HEAD
-    - cron: "0 16 * * *" # UTC 16시 = KWT AM 1시
-=======
     - cron: "0 16 * * MON" # 매 월요일 UTC 16시 = KWT AM 1시
->>>>>>> prod
   push:
     branches:
       - develop
