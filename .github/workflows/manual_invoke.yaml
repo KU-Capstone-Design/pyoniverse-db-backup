@@ -32,24 +32,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y mongodb-org-tools mongodb-org-shell
       
-(*       - name: Run mongodump - ${{ env.CRAWLING_DB }}
-        run: |
-          collections=$(mongo --quiet "${{ secrets.MONGO_URI }}/${{ env.CRAWLING_DB }}" --eval "db.getCollectionNames()")
-          echo "Collections: $collections"
-
-          collections=${collections//\"/}
-          collections=${collections//\[/}
-          collections=${collections//\]/}
-          collections=${collections//,/}
-
-          for collection in $collections ;
-          do
-            echo "Dumping $collection"
-            mongodump --uri="${{ secrets.MONGO_URI }}/${{ env.CRAWLING_DB }}" --readPreference=secondaryPreferred --collection=$collection --out=/tmp/mongodump
-            echo "Done dumping $collection, sleeping for ${{ env.SLEEP_TIME }} seconds"
-            sleep ${{ env.SLEEP_TIME }}
-          done *)
-
       - name: Run mongodump - ${{ env.SERVICE_DB }}
         run: |
           collections=$(mongo --quiet "${{ secrets.MONGO_URI }}/${{ env.SERVICE_DB }}" --eval "db.getCollectionNames()")
@@ -74,26 +56,3 @@ jobs:
       - name: Upload backup to S3
         run: |
           aws s3 cp /tmp/mongodump s3://pyoniverse-backup/${{env.TODAY}} --recursive
-
-(*       - name: Put event to start etl pipeline
-        run: |
-          echo '[{
-            "Source": "${{env.EVENT_SOURCE}}",
-            "DetailType": "${{env.EVENT_DETAILTYPE}}",
-            "EventBusName": "${{env.EVENT_BUS}}",
-            "Detail": "{\"date\": \"${{env.TODAY}}\", \"status\": \"finished\"}"
-          }]' > event.json
-          aws events put-events --entries file://event.json
-
-      - name: Deploy Alarm
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          channel: C05NYKY1KS6
-          author_name: Github Action
-          fields: repo,commit,message,author,took,workflow
-          mention: here
-          if_mention: failure,cancelled *)
-(*         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        if: always() *)
