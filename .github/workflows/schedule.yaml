@@ -1,17 +1,14 @@
-name: Backup Scheduling - dev
+name: Backup Scheduling - PROD
 on:
   schedule:
     - cron: "0 16 * * MON" # 매 월요일 UTC 16시 = KWT AM 1시
-  push:
-    branches:
-      - develop
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      CRAWLING_DB: ${{ secrets.CRAWLING_DEV_DB }}
-      SERVICE_DB: ${{ secrets.SERVICE_DEV_DB }}
-      EVENT_BUS: ${{secrets.EVENT_DEV_BUS}}
+      CRAWLING_DB: ${{ secrets.CRAWLING_PROD_DB }}
+      SERVICE_DB: ${{ secrets.SERVICE_PROD_DB }}
+      EVENT_BUS: ${{secrets.EVENT_PROD_BUS}}
       EVENT_SOURCE: ${{secrets.EVENT_SOURCE}}
       EVENT_DETAILTYPE: ${{secrets.EVENT_DETAILTYPE}}
       SLEEP_TIME: 10
