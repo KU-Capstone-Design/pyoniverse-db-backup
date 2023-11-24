@@ -1,5 +1,7 @@
 name: Backup Scheduling - PROD
 on:
+  push:
+    branches: [prod]
   schedule:
     - cron: "0 16 * * MON" # 매 월요일 UTC 16시 = KWT AM 1시
 jobs:
