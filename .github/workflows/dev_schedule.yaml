@@ -83,7 +83,7 @@ jobs:
             "Source": "${{env.EVENT_SOURCE}}",
             "DetailType": "${{env.EVENT_DETAILTYPE}}",
             "EventBusName": "${{env.EVENT_BUS}}",
-            "Detail": "{\"date\": \"${{env.TODAY}}\"}"
+            "Detail": "{\"date\": \"${{env.TODAY}}\", \"status\": \"finished\"}"
           }]' > event.json
           aws events put-events --entries file://event.json
 
